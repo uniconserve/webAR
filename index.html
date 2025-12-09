@@ -1,0 +1,632 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bottega Gold AR Experience</title>
+    <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+            overflow: hidden;
+        }
+
+        /* Welcome Screen */
+        #welcome-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 50%, #fbbf24 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            transition: opacity 0.5s;
+        }
+
+        .welcome-content {
+            background: white;
+            border-radius: 24px;
+            padding: 40px;
+            max-width: 400px;
+            width: 90%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+            text-align: center;
+        }
+
+        .logo-circle {
+            width: 100px;
+            height: 100px;
+            background: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+            border-radius: 50%;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+        }
+
+        h1 {
+            color: #1f2937;
+            font-size: 32px;
+            margin-bottom: 8px;
+        }
+
+        .subtitle {
+            color: #6b7280;
+            margin-bottom: 30px;
+        }
+
+        .qr-placeholder {
+            width: 150px;
+            height: 150px;
+            background: white;
+            border: 4px dashed #d1d5db;
+            border-radius: 12px;
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+
+        .qr-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 12px);
+            gap: 2px;
+            margin-bottom: 8px;
+        }
+
+        .qr-dot {
+            width: 12px;
+            height: 12px;
+            background: #1f2937;
+            border-radius: 2px;
+        }
+
+        .start-button {
+            width: 100%;
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin-bottom: 12px;
+        }
+
+        .start-button:hover {
+            transform: scale(1.05);
+        }
+
+        .info-text {
+            color: #9ca3af;
+            font-size: 12px;
+        }
+
+        /* AR Container */
+        #ar-container {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        #ar-container.active {
+            display: block;
+        }
+
+        /* CTAs Overlay */
+        #cta-overlay {
+            position: fixed;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            z-index: 100;
+            padding: 0 20px;
+            display: none;
+        }
+
+        #cta-overlay.active {
+            display: block;
+        }
+
+        .cta-container {
+            max-width: 400px;
+            margin: 0 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .cta-button {
+            background: white;
+            border: none;
+            padding: 16px 24px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: transform 0.2s;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+        }
+
+        .cta-button:hover {
+            transform: translateY(-2px);
+        }
+
+        .cta-button.social {
+            background: linear-gradient(135deg, #a855f7 0%, #ec4899 100%);
+            color: white;
+        }
+
+        .cta-button.competition {
+            background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+            color: white;
+        }
+
+        /* Status Indicator */
+        #status-indicator {
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(34, 197, 94, 0.95);
+            color: white;
+            padding: 12px 24px;
+            border-radius: 24px;
+            font-size: 14px;
+            font-weight: 600;
+            z-index: 100;
+            display: none;
+            align-items: center;
+            gap: 8px;
+        }
+
+        #status-indicator.active {
+            display: flex;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            background: white;
+            border-radius: 50%;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        /* Instructions */
+        #instructions {
+            position: fixed;
+            top: 80px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            color: white;
+            font-size: 16px;
+            font-weight: 600;
+            z-index: 100;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+            display: none;
+            padding: 0 20px;
+        }
+
+        #instructions.active {
+            display: block;
+        }
+
+        /* Loading */
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 999;
+        }
+
+        .loading.active {
+            display: flex;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid #fbbf24;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Icons using Unicode */
+        .icon {
+            font-size: 20px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Welcome Screen -->
+    <div id="welcome-screen">
+        <div class="welcome-content">
+            <div class="logo-circle">✨</div>
+            <h1>Bottega Gold</h1>
+            <p class="subtitle">Experience the magic</p>
+            
+            <div style="background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%); padding: 24px; border-radius: 16px; margin-bottom: 24px;">
+                <div class="qr-placeholder">
+                    <div class="qr-grid">
+                        <div class="qr-dot"></div>
+                        <div class="qr-dot"></div>
+                        <div class="qr-dot"></div>
+                        <div class="qr-dot"></div>
+                        <div class="qr-dot"></div>
+                        <div class="qr-dot"></div>
+                        <div class="qr-dot"></div>
+                        <div class="qr-dot"></div>
+                        <div class="qr-dot"></div>
+                        <div class="qr-dot"></div>
+                        <div class="qr-dot"></div>
+                        <div class="qr-dot"></div>
+                        <div class="qr-dot"></div>
+                        <div class="qr-dot"></div>
+                        <div class="qr-dot"></div>
+                        <div class="qr-dot"></div>
+                        <div class="qr-dot"></div>
+                        <div class="qr-dot"></div>
+                        <div class="qr-dot"></div>
+                        <div class="qr-dot"></div>
+                        <div class="qr-dot"></div>
+                        <div class="qr-dot"></div>
+                        <div class="qr-dot"></div>
+                        <div class="qr-dot"></div>
+                        <div class="qr-dot"></div>
+                    </div>
+                    <p style="color: #6b7280; font-size: 12px;">QR Code</p>
+                </div>
+                <p style="color: #4b5563; font-size: 14px;">Scan the QR code on your Bottega Gold bottle</p>
+            </div>
+
+            <button class="start-button" onclick="startARExperience()">
+                📷 Start AR Experience
+            </button>
+            <p class="info-text">No app download required • Works in your browser</p>
+        </div>
+    </div>
+
+    <!-- Loading -->
+    <div id="loading" class="loading">
+        <div style="text-align: center;">
+            <div class="spinner"></div>
+            <p style="color: white; margin-top: 20px;">Starting camera...</p>
+        </div>
+    </div>
+
+    <!-- AR Container -->
+    <div id="ar-container">
+       <a-scene
+            embedded
+            arjs="sourceType: webcam; debugUIEnabled: false; detectionMode: mono_and_matrix; matrixCodeType: 3x3; trackingMethod: best;"
+            vr-mode-ui="enabled: false"
+            renderer="logarithmicDepthBuffer: true; precision: medium; antialias: true;"
+            device-orientation-permission-ui="enabled: false"
+            loading-screen="enabled: false"
+            id="ar-scene"
+            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;">
+            
+            <!-- Camera -->
+            <a-entity camera></a-entity>
+
+            <!-- Marker -->
+            <a-marker preset="hiro" id="marker" smooth="true" smoothCount="10" smoothTolerance="0.01" smoothThreshold="5">
+                <!-- Bottle Model (vertical orientation) -->
+                <a-entity id="bottle-entity" position="0 0 0" rotation="-90 0 0">
+                    <!-- Bottle body (vertical) -->
+                    <a-cylinder 
+                        id="bottle-body"
+                        radius="0.15" 
+                        height="1.2" 
+                        position="0 0.6 0"
+                        color="#D4AF37"
+                        metalness="0.8"
+                        roughness="0.2"
+                        segments-radial="32">
+                    </a-cylinder>
+                    
+                    <!-- Bottle neck -->
+                    <a-cylinder 
+                        radius="0.06"
+                        height="0.4" 
+                        position="0 1.3 0"
+                        color="#B8960F"
+                        metalness="0.8"
+                        roughness="0.2"
+                        segments-radial="32">
+                    </a-cylinder>
+                    
+                    <!-- Bottle cap -->
+                    <a-cylinder 
+                        radius="0.08" 
+                        height="0.1" 
+                        position="0 1.55 0"
+                        color="#1f2937"
+                        metalness="0.5"
+                        roughness="0.3">
+                    </a-cylinder>
+                    
+                    <!-- Gold foil wrap on cap -->
+                    <a-cylinder 
+                        radius="0.085"
+                        height="0.15" 
+                        position="0 1.475 0"
+                        color="#FFD700"
+                        metalness="0.9"
+                        roughness="0.1">
+                    </a-cylinder>
+                    
+                    <!-- Bottle bottom base -->
+                    <a-cylinder 
+                        radius="0.16" 
+                        height="0.08" 
+                        position="0 0.04 0"
+                        color="#B8960F"
+                        metalness="0.7"
+                        roughness="0.3">
+                    </a-cylinder>
+
+                    <!-- Shine effect (left side) -->
+                    <a-plane
+                        position="-0.12 0.8 0.05"
+                        rotation="0 -30 0"
+                        width="0.08"
+                        height="1"
+                        color="#FFFFFF"
+                        opacity="0.3"
+                        transparent="true">
+                    </a-plane>
+
+                    <!-- Label area (optional white band) -->
+                    <a-cylinder 
+                        radius="0.151" 
+                        height="0.3" 
+                        position="0 0.5 0"
+                        color="#FFFFFF"
+                        metalness="0.3"
+                        roughness="0.7"
+                        opacity="0.9">
+                    </a-cylinder>
+
+                    <!-- Bubble container -->
+                    <a-entity id="bubbles-container"></a-entity>
+                </a-entity>
+            </a-marker>
+        </a-scene>
+    </div>
+
+    <!-- Status Indicator -->
+    <div id="status-indicator">
+        <div class="status-dot"></div>
+        <span>Bottle Detected</span>
+    </div>
+
+    <!-- Instructions -->
+    <div id="instructions">
+        📱 Point your camera at the Hiro marker<br>
+        <span style="font-size: 14px;">Print the marker from the guide above</span>
+    </div>
+
+    <!-- CTAs -->
+    <div id="cta-overlay">
+        <div class="cta-container">
+            <button class="cta-button" onclick="openWebsite()">
+                <span class="icon">🌐</span>
+                Visit Our Website
+            </button>
+            <button class="cta-button social" onclick="openSocial()">
+                <span class="icon">📱</span>
+                Follow Us on Instagram
+            </button>
+            <button class="cta-button competition" onclick="openCompetition()">
+                <span class="icon">🎁</span>
+                Enter Competition
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let bubblesActive = false;
+        let bubbleInterval = null;
+        let markerFound = false;
+
+        // Start AR Experience
+        async function startARExperience() {
+
+            document.getElementById('welcome-screen').style.display = 'none';
+            document.getElementById('loading').classList.add('active');
+
+            // Request camera permission
+            try {
+                
+                // Try to get camera access without using get user media directly
+                let stream = await navigator.mediaDevices.getUserMedia({ 
+                    video: { facingMode: 'environment' }, 
+                    audio: false 
+                });
+
+                // Stop the test stream, AR.js will handle it
+                stream.getTracks().forEach(track => track.stop());
+                
+                setTimeout(() => {
+                    document.getElementById('loading').classList.remove('active');
+                    document.getElementById('ar-container').classList.add('active');
+                    document.getElementById('instructions').classList.add('active');
+                    initializeAR();
+                }, 1000);
+            } catch (err) {
+                console.error('Camera access error:', err);
+                alert(err.message || 'Camera access is required for AR.');
+                //
+                alert('Camera access is required for AR. Please allow camera permissions and try again.');
+                document.getElementById('loading').classList.remove('active');
+                document.getElementById('welcome-screen').style.display = 'flex';
+            }
+        }
+
+        // Initialize AR
+        function initializeAR() {
+            const scene = document.querySelector('#ar-scene');
+            const marker = document.querySelector('#marker');
+            const bubblesContainer = document.querySelector('#bubbles-container');
+
+            // Marker found
+            marker.addEventListener('markerFound', () => {
+                console.log('Marker found!');
+                markerFound = true;
+                document.getElementById('status-indicator').classList.add('active');
+                document.getElementById('cta-overlay').classList.add('active');
+                document.getElementById('instructions').classList.remove('active');
+                
+                if (!bubblesActive) {
+                    startBubbles();
+                }
+            });
+
+            // Marker lost
+            marker.addEventListener('markerLost', () => {
+                console.log('Marker lost!');
+                markerFound = false;
+                document.getElementById('status-indicator').classList.remove('active');
+                document.getElementById('cta-overlay').classList.remove('active');
+                document.getElementById('instructions').classList.add('active');
+                stopBubbles();
+            });
+        }
+
+        // Start Bubbles
+        function startBubbles() {
+            bubblesActive = true;
+            const bubblesContainer = document.querySelector('#bubbles-container');
+            
+            // Create bubbles periodically
+            bubbleInterval = setInterval(() => {
+                if (!markerFound) return;
+                
+                createBubble(bubblesContainer);
+            }, 300);
+        }
+
+        // Create individual bubble
+        function createBubble(container) {
+            const bubble = document.createElement('a-sphere');
+            
+            // Random position around bottle
+            const angle = Math.random() * Math.PI * 2;
+            const radius = 0.4 + Math.random() * 0.3;
+            const x = Math.cos(angle) * radius;
+            const z = Math.sin(angle) * radius;
+            const startY = -0.5 + Math.random() * 0.5;
+            
+            const size = 0.08 + Math.random() * 0.12;
+            
+            bubble.setAttribute('radius', size);
+            bubble.setAttribute('position', `${x} ${startY} ${z}`);
+            bubble.setAttribute('color', '#60a5fa');
+            bubble.setAttribute('opacity', 0.6 + Math.random() * 0.3);
+            bubble.setAttribute('metalness', 0.3);
+            bubble.setAttribute('roughness', 0.1);
+            
+            // Animate bubble rising
+            const duration = 2000 + Math.random() * 1500;
+            const endY = startY + 2.5 + Math.random();
+            
+            bubble.setAttribute('animation', 
+                'property: position; to: ' + (x + (Math.random() - 0.5) * 0.3) + ' ' + endY + ' ' + (z + (Math.random() - 0.5) * 0.3) + '; dur: ' + duration + '; easing: easeOutQuad'
+            );
+            
+            bubble.setAttribute('animation__opacity',
+                'property: opacity; to: 0; dur: ' + duration + '; easing: easeInQuad'
+            );
+            
+            container.appendChild(bubble);
+            
+            // Remove bubble after animation
+            setTimeout(() => {
+                if (bubble.parentNode) {
+                    bubble.parentNode.removeChild(bubble);
+                }
+            }, duration);
+        }
+
+        // Stop Bubbles
+        function stopBubbles() {
+            bubblesActive = false;
+            if (bubbleInterval) {
+                clearInterval(bubbleInterval);
+                bubbleInterval = null;
+            }
+            
+            // Clear existing bubbles
+            const bubblesContainer = document.querySelector('#bubbles-container');
+            if (bubblesContainer) {
+                while (bubblesContainer.firstChild) {
+                    bubblesContainer.removeChild(bubblesContainer.firstChild);
+                }
+            }
+        }
+
+        // CTA Functions
+        function openWebsite() {
+            window.open('https://www.bottegaspa.com', '_blank');
+            console.log('Opening website...');
+        }
+
+        function openSocial() {
+            window.open('https://www.instagram.com/bottega_spa/', '_blank');
+            console.log('Opening Instagram...');
+        }
+
+        function openCompetition() {
+            // Replace with actual competition URL
+            alert('Competition page would open here!');
+            console.log('Opening competition...');
+        }
+
+        // Handle page visibility
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                stopBubbles();
+            }
+        });
+    </script>
+</body>
+</html>
